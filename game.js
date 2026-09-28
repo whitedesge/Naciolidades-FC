@@ -83,12 +83,10 @@ function nextDraw() {
   document.getElementById("btn-confirm-player").disabled = false;
 
   const selectedPlayers = Object.values(State.squad);
-  const availablePlayers = CLEAN_DB.filter(player =>
-    player.years.includes(GAME_YEAR) && !selectedPlayers.includes(player)
-  );
+  const availablePlayers = getAvailablePlayers();
   const remainingSlots = POSITIONS.length - selectedPlayers.length;
   if (availablePlayers.length < remainingSlots) {
-    endGame(false, `Restam apenas ${availablePlayers.length} jogadores disponíveis para ${remainingSlots} posições vazias.`);
+    endGame(false, `Restam apenas ${availablePlayers.length} opções sem repetir nacionalidade para ${remainingSlots} posições vazias.`);
     return;
   }
 
@@ -107,6 +105,19 @@ function nextDraw() {
   updateSuggestions();
   renderPitch(); // remove selectable
   toast(`Sorteado: ${State.currentClub} ${GAME_YEAR}`);
+}
+
+function getPlayerNationalities(player) {
+  return player.nation.split("/").map(nation => nation.trim());
+}
+
+function getAvailablePlayers() {
+  const selectedPlayers = Object.values(State.squad);
+  return CLEAN_DB.filter(player =>
+    player.years.includes(GAME_YEAR) &&
+    !selectedPlayers.includes(player) &&
+    !getPlayerNationalities(player).some(nation => State.usedNations.has(nation))
+  );
 }
 
 function getValidPlayers() {
@@ -142,9 +153,10 @@ function updateSuggestions() {
   filtered.forEach(player => {
     const item = document.createElement("button");
     const playerUsed = Object.values(State.squad).includes(player);
+    const nationUsed = getPlayerNationalities(player).some(nation => State.usedNations.has(nation));
     item.type = "button";
     item.className = "flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left transition hover:bg-dark-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60";
-    item.disabled = State.phase !== "choosing" || playerUsed;
+    item.disabled = State.phase !== "choosing" || playerUsed || nationUsed;
     item.setAttribute("role", "option");
     item.setAttribute("aria-selected", String(player.name.toLowerCase() === input));
 
@@ -173,6 +185,11 @@ function updateSuggestions() {
       status.className = "shrink-0 text-right text-[0.65rem] font-semibold text-slate-400";
       status.textContent = "Já escalado";
       item.appendChild(status);
+    } else if (nationUsed) {
+      const status = document.createElement("span");
+      status.className = "shrink-0 text-right text-[0.65rem] font-semibold text-red-300";
+      status.textContent = "Nacionalidade já usada";
+      item.appendChild(status);
     }
 
     item.addEventListener("click", () => {
@@ -199,6 +216,12 @@ function confirmPlayer() {
 
   if (Object.values(State.squad).includes(player)) {
     toast("Este jogador já está escalado no time.");
+    return;
+  }
+
+  const usedNationalities = getPlayerNationalities(player).filter(nation => State.usedNations.has(nation));
+  if (usedNationalities.length > 0) {
+    toast(`Nacionalidade já usada: ${usedNationalities.join(", ")}.`);
     return;
   }
 
@@ -242,11 +265,17 @@ function renderPitch(selectable = false) {
 
 function placePlayer(posId) {
   if (State.phase !== "placing" || !State.selectedPlayer) return;
-  if (State.squad[posId]) return;
+  if (!POSITIONS.some(position => position.id === posId) || State.squad[posId]) return;
 
   const player = State.selectedPlayer;
+  const repeatedNationalities = getPlayerNationalities(player).filter(nation => State.usedNations.has(nation));
+  if (repeatedNationalities.length > 0) {
+    toast(`Nacionalidade já usada: ${repeatedNationalities.join(", ")}.`);
+    return;
+  }
+
   State.squad[posId] = player;
-  State.usedNations.add(player.nation);
+  getPlayerNationalities(player).forEach(nation => State.usedNations.add(nation));
   State.selectedPlayer = null;
   State.phase = "choosing";
 
@@ -272,9 +301,12 @@ function updateNations() {
     return;
   }
   el.innerHTML = "";
-  // Map nation → flag from any player
+  // Use each player's primary nationality to resolve its flag.
   const flagMap = {};
-  CLEAN_DB.forEach(p => { if (!flagMap[p.nation]) flagMap[p.nation] = p.flag; });
+  CLEAN_DB.forEach(player => {
+    const primaryNation = getPlayerNationalities(player)[0];
+    if (!flagMap[primaryNation]) flagMap[primaryNation] = player.flag;
+  });
 
   [...State.usedNations].sort().forEach(n => {
     const span = document.createElement("span");

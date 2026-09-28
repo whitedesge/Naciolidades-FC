@@ -137,12 +137,12 @@
       <p class="text-slate-400 mb-8 max-w-lg mx-auto">
         A cada rodada um clube do Brasileirão de 2026 é sorteado.
         Escolha um jogador que atuou nesse clube na temporada e posicione-o.
-        <strong class="text-accent">Nacionalidades podem se repetir.</strong>
+        <strong class="text-accent">Não repita nacionalidades.</strong>
       </p>
       <div class="bg-dark-700 border border-dark-600 rounded-2xl p-6 max-w-md mx-auto mb-8 text-left text-sm text-slate-300 space-y-2">
         <p>⚽ Formação: <strong class="text-white">1-4-3-3</strong> (11 jogadores)</p>
         <p>🇧🇷 Temporada: Brasileirão Série A 2026</p>
-        <p>👥 Regra: cada jogador só pode ser escalado uma vez</p>
+        <p>🚫 Regra: cada nacionalidade só pode aparecer uma vez</p>
         <p>🏆 Preencha as 11 posições para vencer</p>
       </div>
       <button id="btn-start" class="bg-gradient-to-r from-accent to-accent-dim text-black font-bold px-8 py-3 rounded-xl text-lg hover:scale-105 transition shadow-lg shadow-accent/30">
@@ -184,7 +184,7 @@
               </button>
             </div>
             <div class="flex items-center justify-between gap-3 text-xs text-slate-400">
-              <span>Elenco do clube no ano sorteado</span>
+              <span>Jogadores com país já usado ficam bloqueados</span>
               <span id="player-count" class="shrink-0 font-semibold text-accent" aria-live="polite"></span>
             </div>
             <div id="player-list" class="max-h-64 overflow-y-auto divide-y divide-dark-600 rounded-lg border border-dark-600" role="listbox" aria-label="Jogadores disponíveis"></div>
